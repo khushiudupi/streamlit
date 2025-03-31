@@ -30,8 +30,43 @@ st.dataframe(sales_by_month)
 st.line_chart(sales_by_month, y="Sales")
 
 st.write("## Your additions")
-st.write("### (1) add a drop down for Category (https://docs.streamlit.io/library/api-reference/widgets/st.selectbox)")
-st.write("### (2) add a multi-select for Sub_Category *in the selected Category (1)* (https://docs.streamlit.io/library/api-reference/widgets/st.multiselect)")
-st.write("### (3) show a line chart of sales for the selected items in (2)")
-st.write("### (4) show three metrics (https://docs.streamlit.io/library/api-reference/data/st.metric) for the selected items in (2): total sales, total profit, and overall profit margin (%)")
-st.write("### (5) use the delta option in the overall profit margin metric to show the difference between the overall average profit margin (all products across all categories)")
+# Add a dropdown for selecting Category
+st.write("### Select a Category")
+categories = df["Category"].unique()
+selected_category = st.selectbox("Choose a Category", categories)
+
+# Filter data based on selection
+filtered_df = df[df["Category"] == selected_category]
+
+# Add a multi-select for selecting Sub-Category within the chosen Category
+st.write("### Select Sub_Categories")
+sub_categories = filtered_df["Sub_Category"].unique()
+selected_subcategories = st.multiselect("Choose Sub-Categories", sub_categories, default=sub_categories)
+
+# Further filter data based on selected Sub-Categories
+filtered_df = filtered_df[filtered_df["Sub_Category"].isin(selected_subcategories)]
+
+st.write(f"### Data for {selected_category} - {', '.join(selected_subcategories)}")
+st.dataframe(filtered_df)
+
+
+# Show a line chart of sales for the selected sub-categories
+st.write("### Sales Trend for Selected Sub-Categories")
+sales_trend_subcategories = filtered_df.groupby(["Order_Date", "Sub_Category"])["Sales"].sum().unstack()
+st.line_chart(sales_trend_subcategories)
+
+# Calculate metrics
+total_sales = filtered_df["Sales"].sum()
+total_profit = filtered_df["Profit"].sum()
+profit_margin = (total_profit / total_sales) * 100 if total_sales != 0 else 0
+
+# Calculate overall average profit margin
+overall_profit_margin = (df["Profit"].sum() / df["Sales"].sum()) * 100 if df["Sales"].sum() != 0 else 0
+delta_margin = profit_margin - overall_profit_margin
+
+# Display metrics
+st.write("### Key Metrics")
+st.metric(label="Total Sales", value=f"${total_sales:,.2f}")
+st.metric(label="Total Profit", value=f"${total_profit:,.2f}")
+st.metric(label="Profit Margin (%)", value=f"{profit_margin:.2f}%", delta=f"{delta_margin:.2f}%")
+
